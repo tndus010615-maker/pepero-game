@@ -204,21 +204,32 @@ function startPeperoRain() {
 async function saveGameResult(success) {
     const newResult = {
         name: currentPlayerName,
-        success: success, // 불리언 값 (true/false)
+        success: success,
         device: getDeviceType(),
-        chances: TOTAL_CHANCES - CHANCES_LEFT // 남은 기회 (사용 X)
+        chances: TOTAL_CHANCES - CHANCES_LEFT
     };
 
     try {
-        await fetch(GAS_WEBAPP_URL, {
+        const response = await fetch(GAS_WEBAPP_URL, { // ⬅️ response 변수 추가
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json; charset=utf-8' 
+                'Content-Type': 'application/json; charset=utf-8'
             },
             body: JSON.stringify(newResult),
         });
+
+        // ⭐️ 추가된 부분: 응답의 OK 여부와 서버의 JSON 오류 메시지 확인 ⭐️
+        const result = await response.json();
+        
+        if (result.status === 'error') {
+             console.error('⚠️ GAS 내부 서버 오류:', result.message);
+             alert('기록 저장 실패: ' + result.message); // 사용자에게도 오류 알림
+        } else {
+             console.log('✅ 기록 저장 성공:', result.message);
+        }
+        
     } catch (error) {
-        console.error('기록 저장 중 오류 발생:', error);
+        console.error('❌ 기록 저장 중 네트워크 오류 발생:', error);
     }
     gamePlayed = true;
 }
