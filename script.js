@@ -2,7 +2,7 @@
 
 // ⭐️ 중요: 여기에 배포하신 Apps Script 웹 앱 URL을 반드시 입력하세요! ⭐️
 // (배포 후 매번 새로운 버전으로 업데이트해야 합니다.)
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwg2KUcOsdj5a6rzDtuxE-FUvRwexzHLYQqRyj8gxd_g8CCTMU97vcc13e2WCPf90jC/exec'; 
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwsLN97-BmtxqleqDwO7fUEF4dGt-PoH1cfWVAC2952NmKjti_iFeNHbgm7MbVr8NQW/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -233,17 +233,24 @@ function saveGameResultLocally(result) {
     }
 }
 
+// [script.js] - 수정된 getRemoteResults 함수
+
 /**
  * Apps Script 웹 앱으로 GET 요청을 보내 데이터를 조회합니다.
- * ⭐️ URLSearchParams 대신 문자열 연결 방식으로 action=get 파라미터를 추가합니다.
+ * ⭐️ URL의 파라미터 유무를 확인하여 'action=get'을 안전하게 추가합니다.
  */
 async function getRemoteResults() {
     
-    // ⭐️ 수정된 부분: GAS_WEBAPP_URL에 ?action=get을 직접 문자열로 연결
-    const targetUrl = `${GAS_WEBAPP_URL}?action=get`;
+    // URL에 이미 쿼리 파라미터가 있는지 확인합니다.
+    // Apps Script URL은 대부분 ?가 없으므로 ?를 추가합니다.
+    const separator = GAS_WEBAPP_URL.includes('?') ? '&' : '?';
+    
+    // action=get 파라미터를 안전하게 추가한 최종 URL을 구성합니다.
+    const targetUrl = `${GAS_WEBAPP_URL}${separator}action=get`; 
+    
+    console.log("요청 URL:", targetUrl); // 콘솔에서 URL을 직접 확인해보세요.
     
     try {
-        // 수정된 URL로 fetch 요청
         const response = await fetch(targetUrl); 
         
         if (!response.ok) {
@@ -255,7 +262,7 @@ async function getRemoteResults() {
         return JSON.parse(responseText); 
 
     } catch (error) {
-        console.error('❌ 원격 기록 조회 중 오류 발생 (URL 파라미터 확인 필요):', error);
+        console.error('❌ 원격 기록 조회 중 오류 발생:', error);
         return []; 
     }
 }
