@@ -1,7 +1,7 @@
 // [script.js] - 클라이언트 코드 (Apps Script 연동)
 
 // ⭐️ 중요: 여기에 배포하신 Apps Script 웹 앱 URL을 반드시 입력하세요! ⭐️
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwFrvWrZ9d_seGVdNB9570rC3fvZFS8fl8W2TyLFc91XA9nH3_bqtPbLgRndhMwSAig/exec'; 
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbydG6Gzfu2k8TWRmxM14u5fSjLzpt3u5xH0uy6_lU4UB-T9aHsYrr4-eptsrsat8y-E/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -313,3 +313,57 @@ async function showResults() {
     if (allResults.length === 0) {
         resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 서버에 플레이 기록이 없습니다.</p>';
         return;
+    }
+
+    // --- 이름별 그룹화 로직 ---
+
+    const groupedResults = allResults.reduce((acc, result) => {
+        if (!acc[result.name]) {
+            acc[result.name] = [];
+        }
+        acc[result.name].push(result);
+        return acc;
+    }, {});
+
+    resultsList.innerHTML = ''; 
+    
+    // 이름 목록을 최근 플레이한 순서대로 정렬 (Apps Script에서 역순 정렬되어 왔음)
+    const uniqueNamesInOrder = [...new Set(allResults.map(r => r.name))]; 
+
+    uniqueNamesInOrder.forEach(name => {
+        const results = groupedResults[name];
+
+        const nameHeader = document.createElement('div');
+        nameHeader.classList.add('name-header');
+        nameHeader.innerHTML = `<strong>${name}</strong> <span style="font-size: 0.7em; color: #666;">(총 ${results.length}회 시도)</span>`;
+        resultsList.appendChild(nameHeader);
+
+        results.forEach((result, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.classList.add('history-item');
+            
+            const statusClass = result.success ? 'success' : 'failure';
+            const statusText = result.success ? '성공' : '실패';
+            
+            // Apps Script에서 온 timestamp (예: "2025. 11. 4. 오전 11:36:28")
+            const fullTimestamp = result.timestamp;
+            
+            const historyText = `${result.device} 시도 ${results.length - index}회`;
+
+            historyItem.innerHTML = `
+                <span>${historyText}</span>
+                <span>
+                    <span class="${statusClass}">${statusText}</span>
+                    <span style="color: #999; margin-left: 10px;">${fullTimestamp}</span>
+                </span>
+            `;
+            resultsList.appendChild(historyItem);
+        });
+    });
+} // 👈 누락된 중괄호 추가
+
+
+// 페이지 로드 시 시작 화면만 표시
+gameArea.classList.add('hidden'); 
+resultsArea.classList.add('hidden'); 
+startScreen.classList.remove('hidden');
