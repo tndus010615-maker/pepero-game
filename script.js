@@ -1,6 +1,4 @@
-// ⭐️ 이 파일 전체를 기존의 script.js 파일에 덮어쓰세요! ⭐️
-
-// [이전 코드] const GAS_WEBAPP_URL = '...'; // <-- 이 줄은 제거됩니다.
+// [이전 코드] const GAS_WEBAPP_URL = '...'; // DB 연동을 포기했으므로 이 줄은 제거되었습니다.
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -229,15 +227,32 @@ function showResults() {
     resultsArea.classList.remove('hidden');
     resultsList.innerHTML = '<p style="text-align: center; color: #777;">⏳ 로컬 기록을 불러오는 중...</p>';
 
-    // ⭐️ 로컬 저장소에서 데이터 불러오기 ⭐️
-    const allResults = JSON.parse(localStorage.getItem('peperoGameResults')) || []; 
+    let allResults = [];
+    
+    // ⭐️ 수정: JSON 파싱 시 try-catch 블록 추가하여 안전하게 데이터 로드 ⭐️
+    try {
+        const storedData = localStorage.getItem('peperoGameResults');
+        if (storedData) {
+            allResults = JSON.parse(storedData);
+        }
+    } catch (e) {
+        console.error("❌ 로컬 저장소 데이터 파싱 오류! 데이터가 손상되었습니다.", e);
+        // 파싱 오류 발생 시, 로컬 저장소를 클리어하여 다음 시도부터 정상 동작하도록 유도
+        localStorage.removeItem('peperoGameResults'); 
+        
+        // 오류 메시지를 resultsList에 표시하고 함수 종료
+        resultsList.innerHTML = `<p style="text-align: center; color: #F44336;">기록 데이터가 손상되어 초기화되었습니다. 다시 플레이해주세요.</p>`;
+        return; 
+    }
+    
+    // --- (이하 기존 로직) ---
 
     if (allResults.length === 0) {
         resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 플레이 기록이 없습니다. (이 기기에 저장된 기록)</p>';
         return;
     }
 
-    // --- 이름별 그룹화 로직 (기존과 동일) ---
+    // --- 이름별 그룹화 로직 ---
 
     const groupedResults = allResults.reduce((acc, result) => {
         if (!acc[result.name]) {
