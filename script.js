@@ -2,7 +2,7 @@
 
 // ⭐️ 중요: 여기에 배포하신 Apps Script 웹 앱 URL을 반드시 입력하세요! ⭐️
 // (배포 후 매번 새로운 버전으로 업데이트해야 합니다.)
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyZ15eNsYUBbrJ8JVm9_R0rL9MslhZv8eiwdbkbkRoCGViPpj97T467xE8GbO7vm8Ee/exec'; 
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxjDu4qUuxAY-ueGIu1Yjg7njNX5uZ20Fzmn62H7hJfs9JIY8G47rMWqJ4X9MOrtC3R/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
