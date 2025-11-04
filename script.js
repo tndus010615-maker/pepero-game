@@ -1,5 +1,6 @@
-// ⭐️ 3단계에서 복사한 웹 앱 URL을 여기에 붙여넣으세요! ⭐️
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxE5upvh9Os3_LChlCpBbnWWaVNnmGwKDtkHOkObxpleRO7q6S4A2UvPSHXrKdpOHY6/exec'; 
+// ⭐️ 이 파일 전체를 기존의 script.js 파일에 덮어쓰세요! ⭐️
+
+// [이전 코드] const GAS_WEBAPP_URL = '...'; // <-- 이 줄은 제거됩니다.
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -23,13 +24,11 @@ let gamePlayed = false;
 // ====================== 기기 감지 및 기본 함수 ======================
 
 function getDeviceType() {
+    // 기기 정보는 로컬 저장소 기록에만 사용됩니다.
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-
-    // 모바일 기기 흔적 확인
     if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
         return '[모바일]';
     }
-    // 일반적인 PC 환경
     return '[PC]';
 }
 
@@ -54,7 +53,8 @@ function hideResults() {
 }
 
 function clearAllResults() {
-    if (confirm("이 기기에 저장된 모든 로컬 기록을 정말로 삭제하시겠습니까? (통합 DB 기록에는 영향을 주지 않습니다)")) {
+    // ⭐️ 로컬 저장소의 모든 기록을 삭제합니다. ⭐️
+    if (confirm("이 기기에 저장된 모든 로컬 기록을 정말로 삭제하시겠습니까?")) {
         localStorage.removeItem('peperoGameResults');
         alert("로컬 기록이 삭제되었습니다.");
         if (!resultsArea.classList.contains('hidden')) {
@@ -64,7 +64,7 @@ function clearAllResults() {
 }
 
 
-// ====================== 게임 로직 함수 ======================
+// ====================== 게임 로직 함수 (이 부분은 동일합니다) ======================
 
 function initializeGame() {
     CHANCES_LEFT = TOTAL_CHANCES;
@@ -117,7 +117,7 @@ function handlePeperoClick(event) {
         GAME_OVER = true;
         clearInterval(peperoCreationInterval);
         
-        if (!gamePlayed) saveGameResult(true); // 성공 기록 저장 (DB 전송)
+        if (!gamePlayed) saveGameResult(true); // 성공 기록 로컬 저장
         
         revealEasterEgg(true); 
         
@@ -148,7 +148,7 @@ function handlePeperoClick(event) {
         GAME_OVER = true;
         clearInterval(peperoCreationInterval);
         
-        if (!gamePlayed) saveGameResult(false); // 실패 기록 저장 (DB 전송)
+        if (!gamePlayed) saveGameResult(false); // 실패 기록 로컬 저장
         
         revealEasterEgg(false);
         
@@ -198,115 +198,93 @@ function startPeperoRain() {
 }
 
 
-// ====================== 결과 저장 및 표시 함수 (DB 연동) ======================
+// ====================== 결과 저장 및 표시 함수 (로컬 저장소 사용) ======================
 
-// 1. 결과 저장 함수 (DB로 전송)
-async function saveGameResult(success) {
+// 1. 결과 저장 함수 (로컬 저장소에 저장)
+function saveGameResult(success) {
     const newResult = {
         name: currentPlayerName,
         success: success,
         device: getDeviceType(),
-        chances: TOTAL_CHANCES - CHANCES_LEFT
+        chances: TOTAL_CHANCES - CHANCES_LEFT,
+        timestamp: new Date().toLocaleString() // 로컬 저장용 시간 기록
     };
-
+    
     try {
-        const response = await fetch(GAS_WEBAPP_URL, { // ⬅️ response 변수 추가
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json; charset=utf-8'
-            },
-            body: JSON.stringify(newResult),
-        });
-
-        // ⭐️ 추가된 부분: 응답의 OK 여부와 서버의 JSON 오류 메시지 확인 ⭐️
-        const result = await response.json();
-        
-        if (result.status === 'error') {
-             console.error('⚠️ GAS 내부 서버 오류:', result.message);
-             alert('기록 저장 실패: ' + result.message); // 사용자에게도 오류 알림
-        } else {
-             console.log('✅ 기록 저장 성공:', result.message);
-        }
-        
+        const storedResults = JSON.parse(localStorage.getItem('peperoGameResults')) || [];
+        storedResults.push(newResult);
+        localStorage.setItem('peperoGameResults', JSON.stringify(storedResults));
+        console.log('✅ 기록 저장 성공 (로컬 저장소):', newResult);
     } catch (error) {
-        console.error('❌ 기록 저장 중 네트워크 오류 발생:', error);
+        console.error('❌ 로컬 기록 저장 중 오류 발생:', error);
     }
     gamePlayed = true;
 }
 
 
-// 2. 결과 표시 함수 (DB에서 불러오기 및 그룹화)
-async function showResults() {
+// 2. 결과 표시 함수 (로컬 저장소에서 불러오기 및 그룹화)
+function showResults() {
     startScreen.classList.add('hidden');
     gameArea.classList.add('hidden');
     resultsArea.classList.remove('hidden');
-    resultsList.innerHTML = '<p style="text-align: center; color: #777;">🌐 통합 기록을 불러오는 중...</p>';
+    resultsList.innerHTML = '<p style="text-align: center; color: #777;">⏳ 로컬 기록을 불러오는 중...</p>';
 
+    // ⭐️ 로컬 저장소에서 데이터 불러오기 ⭐️
+    const allResults = JSON.parse(localStorage.getItem('peperoGameResults')) || []; 
 
-    try {
-        // GET 요청으로 DB에 저장된 모든 기록을 가져옵니다.
-        const response = await fetch(GAS_WEBAPP_URL); 
-        if (!response.ok) throw new Error('서버에서 데이터를 불러올 수 없습니다.');
-
-        const allResults = await response.json(); 
-
-        if (allResults.length === 0) {
-            resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 플레이 기록이 없습니다.</p>';
-            return;
-        }
-
-        // --- 이름별 그룹화 로직 ---
-
-        const groupedResults = allResults.reduce((acc, result) => {
-            if (!acc[result.name]) {
-                acc[result.name] = [];
-            }
-            acc[result.name].push(result);
-            return acc;
-        }, {});
-
-        resultsList.innerHTML = ''; 
-        
-        // 이름 목록을 최근 플레이한 순서대로 정렬 (가장 최근 기록이 가장 마지막에 있기 때문에 역순으로 정렬)
-        const uniqueNamesInOrder = [...new Set(allResults.map(r => r.name))].reverse();
-
-        uniqueNamesInOrder.forEach(name => {
-            const results = groupedResults[name].reverse(); // 최신 기록이 위로 오도록 정렬
-
-            const nameHeader = document.createElement('div');
-            nameHeader.classList.add('name-header');
-            nameHeader.innerHTML = `<strong>${name}</strong> <span style="font-size: 0.7em; color: #666;">(총 ${results.length}회 시도)</span>`;
-            resultsList.appendChild(nameHeader);
-
-            results.forEach((result, index) => {
-                const historyItem = document.createElement('div');
-                historyItem.classList.add('history-item');
-                
-                const statusClass = result.success ? 'success' : 'failure';
-                const statusText = result.success ? '성공' : '실패';
-                
-                // GAS에서 저장된 시간 문자열을 파싱하여 표시
-                const displayTime = new Date(result.timestamp).toLocaleTimeString('ko-KR', {
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                });
-                
-                // 요청하신 형식: [기기] 성공/실패 시간
-                const historyText = `${result.device} 시도 ${results.length - index}회`;
-
-                historyItem.innerHTML = `
-                    <span>${historyText}</span>
-                    <span>
-                        <span class="${statusClass}">${statusText}</span>
-                        <span style="color: #999; margin-left: 10px;">${displayTime}</span>
-                    </span>
-                `;
-                resultsList.appendChild(historyItem);
-            });
-        });
-
-    } catch (error) {
-        resultsList.innerHTML = `<p style="text-align: center; color: #F44336;">기록을 불러오지 못했습니다. (연결 오류를 확인하세요)</p>`;
+    if (allResults.length === 0) {
+        resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 플레이 기록이 없습니다. (이 기기에 저장된 기록)</p>';
+        return;
     }
+
+    // --- 이름별 그룹화 로직 (기존과 동일) ---
+
+    const groupedResults = allResults.reduce((acc, result) => {
+        if (!acc[result.name]) {
+            acc[result.name] = [];
+        }
+        acc[result.name].push(result);
+        return acc;
+    }, {});
+
+    resultsList.innerHTML = ''; 
+    
+    // 이름 목록을 최근 플레이한 순서대로 정렬 (가장 최근 기록이 가장 마지막에 있기 때문에 역순으로 정렬)
+    const uniqueNamesInOrder = [...new Set(allResults.map(r => r.name))].reverse();
+
+    uniqueNamesInOrder.forEach(name => {
+        const results = groupedResults[name].reverse(); // 최신 기록이 위로 오도록 정렬
+
+        const nameHeader = document.createElement('div');
+        nameHeader.classList.add('name-header');
+        nameHeader.innerHTML = `<strong>${name}</strong> <span style="font-size: 0.7em; color: #666;">(총 ${results.length}회 시도)</span>`;
+        resultsList.appendChild(nameHeader);
+
+        results.forEach((result, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.classList.add('history-item');
+            
+            const statusClass = result.success ? 'success' : 'failure';
+            const statusText = result.success ? '성공' : '실패';
+            
+            // 저장된 시간 문자열을 파싱하여 표시
+            const displayTime = new Date(result.timestamp).toLocaleTimeString('ko-KR', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            
+            // 요청하신 형식: [기기] 성공/실패 시간
+            const historyText = `${result.device} 시도 ${results.length - index}회`;
+
+            historyItem.innerHTML = `
+                <span>${historyText}</span>
+                <span>
+                    <span class="${statusClass}">${statusText}</span>
+                    <span style="color: #999; margin-left: 10px;">${displayTime}</span>
+                </span>
+            `;
+            resultsList.appendChild(historyItem);
+        });
+    });
 }
 
 
