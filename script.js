@@ -1,5 +1,5 @@
 // ⭐️ 3단계에서 복사한 웹 앱 URL을 여기에 붙여넣으세요! ⭐️
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwpatOlfd2JSGai_v7gxMVRJbfDmbjlIVsqbS4JCXg1pdA3IpMrVHmz3NvIhdg0c385/exec'; 
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzCjnEYhzruWHSZPKVgqLujo5rPkIvUXsUMs7fGNGOAmvju6zexskAa0ITN4kKkcyHx/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
