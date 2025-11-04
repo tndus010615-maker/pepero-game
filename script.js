@@ -1,7 +1,8 @@
 // [script.js] - 클라이언트 코드 (Apps Script 연동)
 
 // ⭐️ 중요: 여기에 배포하신 Apps Script 웹 앱 URL을 반드시 입력하세요! ⭐️
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbydG6Gzfu2k8TWRmxM14u5fSjLzpt3u5xH0uy6_lU4UB-T9aHsYrr4-eptsrsat8y-E/exec'; 
+// (배포 후 매번 새로운 버전으로 업데이트해야 합니다.)
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwg2KUcOsdj5a6rzDtuxE-FUvRwexzHLYQqRyj8gxd_g8CCTMU97vcc13e2WCPf90jC/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -234,16 +235,27 @@ function saveGameResultLocally(result) {
 
 /**
  * Apps Script 웹 앱으로 GET 요청을 보내 데이터를 조회합니다.
+ * ⭐️ URLSearchParams를 사용하여 action=get 파라미터를 안정적으로 추가합니다.
  */
 async function getRemoteResults() {
+    // 1. URL 객체 생성 및 파라미터 추가
+    const url = new URL(GAS_WEBAPP_URL);
+    url.searchParams.append('action', 'get'); // 'action=get' 파라미터 추가
+    
     try {
-        const response = await fetch(`${GAS_WEBAPP_URL}?action=get`);
+        // 2. 수정된 URL로 fetch 요청
+        const response = await fetch(url.toString()); 
+        
         if (!response.ok) {
             throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
         }
-        return await response.json(); 
+        
+        // Apps Script에서 JAVASCRIPT(JSONP) 형식으로 응답을 보냄
+        const responseText = await response.text();
+        return JSON.parse(responseText); 
+
     } catch (error) {
-        console.error('❌ 원격 기록 조회 중 오류 발생:', error);
+        console.error('❌ 원격 기록 조회 중 오류 발생 (파라미터 확인 필요):', error);
         return []; 
     }
 }
@@ -266,12 +278,12 @@ async function saveRemoteResult(resultData) {
         });
 
         if (!response.ok) {
+            console.error('❌ 원격 기록 저장 실패 (Apps Script 오류). 로컬에 저장합니다.');
             throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
         }
         console.log('✅ 기록 저장 성공 (Apps Script):', resultData);
     } catch (error) {
         console.error('❌ 원격 기록 저장 중 오류 발생. 로컬에 저장합니다.', error);
-        // 서버 저장 실패 시 로컬에 저장하는 백업 로직
         saveGameResultLocally(resultData);
     }
 }
@@ -360,7 +372,7 @@ async function showResults() {
             resultsList.appendChild(historyItem);
         });
     });
-} // 👈 누락된 중괄호 추가
+}
 
 
 // 페이지 로드 시 시작 화면만 표시
