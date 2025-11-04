@@ -1,4 +1,7 @@
-// [이전 코드] const GAS_WEBAPP_URL = '...'; // DB 연동을 포기했으므로 이 줄은 제거되었습니다.
+// [script.js] - 클라이언트 코드 (Apps Script 연동)
+
+// ⭐️ 중요: 여기에 배포하신 Apps Script 웹 앱 URL을 반드시 입력하세요! ⭐️
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwFrvWrZ9d_seGVdNB9570rC3fvZFS8fl8W2TyLFc91XA9nH3_bqtPbLgRndhMwSAig/exec'; 
 
 const peperoRainContainer = document.getElementById('pepero-rain-container');
 const easterEgg = document.getElementById('easter-egg');
@@ -22,7 +25,6 @@ let gamePlayed = false;
 // ====================== 기기 감지 및 기본 함수 ======================
 
 function getDeviceType() {
-    // 기기 정보는 로컬 저장소 기록에만 사용됩니다.
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
         return '[모바일]';
@@ -51,10 +53,14 @@ function hideResults() {
 }
 
 function clearAllResults() {
-    // ⭐️ 로컬 저장소의 모든 기록을 삭제합니다. ⭐️
-    if (confirm("이 기기에 저장된 모든 로컬 기록을 정말로 삭제하시겠습니까?")) {
+    if (confirm("🚨 모든 기기에서 공유되는 **서버 기록**과 이 기기에 저장된 **로컬 기록**을 모두 삭제하시겠습니까?")) {
+        // 1. 서버 기록 삭제 시도
+        clearAllRemoteResults();
+        
+        // 2. 로컬 기록 삭제
         localStorage.removeItem('peperoGameResults');
-        alert("로컬 기록이 삭제되었습니다.");
+        alert("로컬 및 서버 기록 삭제 요청 완료.");
+        
         if (!resultsArea.classList.contains('hidden')) {
             hideResults();
         }
@@ -62,7 +68,7 @@ function clearAllResults() {
 }
 
 
-// ====================== 게임 로직 함수 (이 부분은 동일합니다) ======================
+// ====================== 게임 로직 함수 (기존과 동일) ======================
 
 function initializeGame() {
     CHANCES_LEFT = TOTAL_CHANCES;
@@ -94,7 +100,7 @@ function createPeperoStick() {
     peperoIndex++;
     
     if (peperoIndex === WINNING_PEPERO_ID) {
-         pepero.dataset.winner = 'true';
+           pepero.dataset.winner = 'true';
     }
 
     pepero.addEventListener('click', handlePeperoClick);
@@ -115,7 +121,7 @@ function handlePeperoClick(event) {
         GAME_OVER = true;
         clearInterval(peperoCreationInterval);
         
-        if (!gamePlayed) saveGameResult(true); // 성공 기록 로컬 저장
+        if (!gamePlayed) saveGameResult(true); // 성공 기록 서버 저장
         
         revealEasterEgg(true); 
         
@@ -146,7 +152,7 @@ function handlePeperoClick(event) {
         GAME_OVER = true;
         clearInterval(peperoCreationInterval);
         
-        if (!gamePlayed) saveGameResult(false); // 실패 기록 로컬 저장
+        if (!gamePlayed) saveGameResult(false); // 실패 기록 서버 저장
         
         revealEasterEgg(false);
         
@@ -196,114 +202,114 @@ function startPeperoRain() {
 }
 
 
-// ====================== 결과 저장 및 표시 함수 (로컬 저장소 사용) ======================
+// ====================== 결과 저장 및 표시 함수 (Apps Script 연동) ======================
 
-// 1. 결과 저장 함수 (로컬 저장소에 저장)
+// 1. 결과 저장 함수 (서버에 저장하고, 실패 시 로컬에 백업)
 function saveGameResult(success) {
     const newResult = {
         name: currentPlayerName,
         success: success,
         device: getDeviceType(),
         chances: TOTAL_CHANCES - CHANCES_LEFT,
-        timestamp: new Date().toLocaleString() // 로컬 저장용 시간 기록
+        timestamp: new Date().toLocaleString() // 로컬 백업용 시간 기록 (서버는 서버 시간 사용)
     };
     
-    try {
-        const storedResults = JSON.parse(localStorage.getItem('peperoGameResults')) || [];
-        storedResults.push(newResult);
-        localStorage.setItem('peperoGameResults', JSON.stringify(storedResults));
-        console.log('✅ 기록 저장 성공 (로컬 저장소):', newResult);
-    } catch (error) {
-        console.error('❌ 로컬 기록 저장 중 오류 발생:', error);
-    }
+    // ⭐️ 원격 저장 시도 (다른 PC와 공유) ⭐️
+    saveRemoteResult(newResult); 
+    
     gamePlayed = true;
 }
 
-
-// 2. 결과 표시 함수 (로컬 저장소에서 불러오기 및 그룹화)
-function showResults() {
-    startScreen.classList.add('hidden');
-    gameArea.classList.add('hidden');
-    resultsArea.classList.remove('hidden');
-    resultsList.innerHTML = '<p style="text-align: center; color: #777;">⏳ 로컬 기록을 불러오는 중...</p>';
-
-    let allResults = [];
-    
-    // ⭐️ 수정: JSON 파싱 시 try-catch 블록 추가하여 안전하게 데이터 로드 ⭐️
+// 2. 로컬 저장소 백업 함수 (서버 저장 실패 시 호출)
+function saveGameResultLocally(result) {
     try {
-        const storedData = localStorage.getItem('peperoGameResults');
-        if (storedData) {
-            allResults = JSON.parse(storedData);
-        }
-    } catch (e) {
-        console.error("❌ 로컬 저장소 데이터 파싱 오류! 데이터가 손상되었습니다.", e);
-        // 파싱 오류 발생 시, 로컬 저장소를 클리어하여 다음 시도부터 정상 동작하도록 유도
-        localStorage.removeItem('peperoGameResults'); 
-        
-        // 오류 메시지를 resultsList에 표시하고 함수 종료
-        resultsList.innerHTML = `<p style="text-align: center; color: #F44336;">기록 데이터가 손상되어 초기화되었습니다. 다시 플레이해주세요.</p>`;
-        return; 
+        const storedResults = JSON.parse(localStorage.getItem('peperoGameResults')) || [];
+        storedResults.push(result);
+        localStorage.setItem('peperoGameResults', JSON.stringify(storedResults));
+        console.log('✅ 기록 저장 성공 (로컬 저장소 백업):', result);
+    } catch (error) {
+        console.error('❌ 로컬 기록 저장 중 오류 발생:', error);
     }
-    
-    // --- (이하 기존 로직) ---
+}
 
-    if (allResults.length === 0) {
-        resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 플레이 기록이 없습니다. (이 기기에 저장된 기록)</p>';
-        return;
-    }
-
-    // --- 이름별 그룹화 로직 ---
-
-    const groupedResults = allResults.reduce((acc, result) => {
-        if (!acc[result.name]) {
-            acc[result.name] = [];
+/**
+ * Apps Script 웹 앱으로 GET 요청을 보내 데이터를 조회합니다.
+ */
+async function getRemoteResults() {
+    try {
+        const response = await fetch(`${GAS_WEBAPP_URL}?action=get`);
+        if (!response.ok) {
+            throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
         }
-        acc[result.name].push(result);
-        return acc;
-    }, {});
+        return await response.json(); 
+    } catch (error) {
+        console.error('❌ 원격 기록 조회 중 오류 발생:', error);
+        return []; 
+    }
+}
 
-    resultsList.innerHTML = ''; 
-    
-    // 이름 목록을 최근 플레이한 순서대로 정렬 (가장 최근 기록이 가장 마지막에 있기 때문에 역순으로 정렬)
-    const uniqueNamesInOrder = [...new Set(allResults.map(r => r.name))].reverse();
+/**
+ * Apps Script 웹 앱으로 POST 요청을 보내 데이터를 저장합니다.
+ */
+async function saveRemoteResult(resultData) {
+    const urlParams = new URLSearchParams();
+    urlParams.append('action', 'save');
+    urlParams.append('name', resultData.name);
+    urlParams.append('success', resultData.success ? 'TRUE' : 'FALSE'); 
+    urlParams.append('device', resultData.device);
+    urlParams.append('chances', resultData.chances);
 
-    uniqueNamesInOrder.forEach(name => {
-        const results = groupedResults[name].reverse(); // 최신 기록이 위로 오도록 정렬
-
-        const nameHeader = document.createElement('div');
-        nameHeader.classList.add('name-header');
-        nameHeader.innerHTML = `<strong>${name}</strong> <span style="font-size: 0.7em; color: #666;">(총 ${results.length}회 시도)</span>`;
-        resultsList.appendChild(nameHeader);
-
-        results.forEach((result, index) => {
-            const historyItem = document.createElement('div');
-            historyItem.classList.add('history-item');
-            
-            const statusClass = result.success ? 'success' : 'failure';
-            const statusText = result.success ? '성공' : '실패';
-            
-            // 저장된 시간 문자열을 파싱하여 표시
-            const displayTime = new Date(result.timestamp).toLocaleTimeString('ko-KR', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
-            
-            // 요청하신 형식: [기기] 성공/실패 시간
-            const historyText = `${result.device} 시도 ${results.length - index}회`;
-
-            historyItem.innerHTML = `
-                <span>${historyText}</span>
-                <span>
-                    <span class="${statusClass}">${statusText}</span>
-                    <span style="color: #999; margin-left: 10px;">${displayTime}</span>
-                </span>
-            `;
-            resultsList.appendChild(historyItem);
+    try {
+        const response = await fetch(GAS_WEBAPP_URL, {
+            method: 'POST',
+            body: urlParams,
         });
-    });
+
+        if (!response.ok) {
+            throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
+        }
+        console.log('✅ 기록 저장 성공 (Apps Script):', resultData);
+    } catch (error) {
+        console.error('❌ 원격 기록 저장 중 오류 발생. 로컬에 저장합니다.', error);
+        // 서버 저장 실패 시 로컬에 저장하는 백업 로직
+        saveGameResultLocally(resultData);
+    }
+}
+
+/**
+ * 모든 원격 기록 데이터를 삭제합니다. 
+ */
+async function clearAllRemoteResults() {
+    const urlParams = new URLSearchParams();
+    urlParams.append('action', 'clear');
+
+    try {
+        const response = await fetch(GAS_WEBAPP_URL, {
+            method: 'POST',
+            body: urlParams,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
+        }
+        console.log("✅ 서버 기록 삭제 완료.");
+    } catch (error) {
+        console.error('❌ 원격 기록 삭제 중 오류 발생:', error);
+        alert("서버 기록 삭제 실패!");
+    }
 }
 
 
-// 페이지 로드 시 시작 화면만 표시
-gameArea.classList.add('hidden'); 
-resultsArea.classList.add('hidden'); 
-startScreen.classList.remove('hidden');
+// 3. 결과 표시 함수 (서버에서 불러오기)
+async function showResults() { 
+    startScreen.classList.add('hidden');
+    gameArea.classList.add('hidden');
+    resultsArea.classList.remove('hidden');
+    resultsList.innerHTML = '<p style="text-align: center; color: #777;">⏳ **서버 기록**을 불러오는 중...</p>';
+
+    // ⭐️ 서버에서 모든 기록을 불러옵니다. ⭐️
+    let allResults = await getRemoteResults(); 
+    
+    if (allResults.length === 0) {
+        resultsList.innerHTML = '<p style="text-align: center; color: #777;">아직 서버에 플레이 기록이 없습니다.</p>';
+        return;
