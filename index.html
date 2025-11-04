@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍫 당첨 빼빼로를 잡아라! 🎁</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css"> 
+</head>
+<body>
+
+    <header>
+        <h1>🎀 해피 빼빼로 데이 이벤트! 🎁</h1>
+    </header>
+    
+    <main>
+        <div id="start-screen">
+            <input type="text" id="user-name" placeholder="이름을 입력하세요" maxlength="10">
+            <button onclick="startGame()">게임 시작</button>
+            <button onclick="showResults()">결과 확인 (통합)</button>
+            <button onclick="clearAllResults()" style="background-color: #ff5722; margin-top: 15px;">로컬 기록 삭제</button> 
+        </div>
+
+        <div id="results-area" class="hidden">
+            <h2>📜 게임 결과 랭킹</h2>
+            <div id="results-list"></div>
+            <button onclick="hideResults()">돌아가기</button>
+        </div>
+
+        <div id="game-area" class="hidden">
+            <div id="chance-counter">남은 기회: 7번</div>
+            <div id="pepero-rain-container"></div>
+        </div>
+
+        <div id="easter-egg" class="hidden">
+            <h2>✨ 빼빼로 당첨 ✨</h2>
+            <p>대박! 🎊 당신이 바로 오늘의 행운의 주인공! 🎉</p>
+            <button onclick="hideEasterEgg()">다시 도전</button> 
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
