@@ -235,16 +235,16 @@ function saveGameResultLocally(result) {
 
 /**
  * Apps Script 웹 앱으로 GET 요청을 보내 데이터를 조회합니다.
- * ⭐️ URLSearchParams를 사용하여 action=get 파라미터를 안정적으로 추가합니다.
+ * ⭐️ URLSearchParams 대신 문자열 연결 방식으로 action=get 파라미터를 추가합니다.
  */
 async function getRemoteResults() {
-    // 1. URL 객체 생성 및 파라미터 추가
-    const url = new URL(GAS_WEBAPP_URL);
-    url.searchParams.append('action', 'get'); // 'action=get' 파라미터 추가
+    
+    // ⭐️ 수정된 부분: GAS_WEBAPP_URL에 ?action=get을 직접 문자열로 연결
+    const targetUrl = `${GAS_WEBAPP_URL}?action=get`;
     
     try {
-        // 2. 수정된 URL로 fetch 요청
-        const response = await fetch(url.toString()); 
+        // 수정된 URL로 fetch 요청
+        const response = await fetch(targetUrl); 
         
         if (!response.ok) {
             throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
@@ -255,7 +255,7 @@ async function getRemoteResults() {
         return JSON.parse(responseText); 
 
     } catch (error) {
-        console.error('❌ 원격 기록 조회 중 오류 발생 (파라미터 확인 필요):', error);
+        console.error('❌ 원격 기록 조회 중 오류 발생 (URL 파라미터 확인 필요):', error);
         return []; 
     }
 }
